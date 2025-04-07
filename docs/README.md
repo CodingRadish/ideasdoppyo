@@ -16,7 +16,7 @@ from tcphandler import TCPhandler
 
 This project can be installed directly using pip, write in your terminal:
 ```python 
-python -m pip install git+https://github.com/ideas-asic/ideasdoppyo.git
+python -m pip install git+https://github.com/CodingRadish/ideasdoppyo.git
 ```
 
 Then import in your script using, e.g.,:
