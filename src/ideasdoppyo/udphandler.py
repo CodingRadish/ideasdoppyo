@@ -1,4 +1,3 @@
-
 """
 Copyright 2024 Integrated Detector Electronics AS, Norway.
 
@@ -14,7 +13,7 @@ are met:
 3. Neither the name of the copyright holder nor the names of its contributors
    may be used to endorse or promote products derived from this software
    without specific prior written permission.
-   
+
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -28,7 +27,6 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-
 """
 Receives UDP packets from IDEAS Doppio.
 For UDP, the PC is configured as network server, with the hardware as client.
@@ -36,14 +34,17 @@ For UDP, the PC is configured as network server, with the hardware as client.
 
 import numpy as np
 import socket
-import binascii
-from dataformats import common_header_format, pipeline_sampling_format
+import time
+
 
 class UDPhandler:
     """
     server_ip: IP on the PC side.
     """
-    def __init__(self, data_format: int, server_ip: str="10.10.0.100", port: int=50011):
+
+    def __init__(
+        self, data_format: int, server_ip: str = "10.10.0.100", port: int = 50011
+    ):
         """
         Args:
             data_format: {0: Image, 1: Multi-event pulse height, 2: Single-event pulse height, 3: Trigger Time, 4: Pipeline Sampling}
@@ -55,26 +56,19 @@ class UDPhandler:
 
         # TODO: change to packet ID to fit with documentation
         self.data_format = data_format
-        header_byte_length_dict = {
-            0 : 20,
-            1 : 3,
-            2 : 7,
-            3 : 0,
-            4 : 14
-        }
+        header_byte_length_dict = {0: 20, 1: 3, 2: 7, 3: 0, 4: 14}
 
         self.mask_header = False
-        self.mask_common_header = False # Only mask common header
+        self.mask_common_header = False  # Only mask common header
 
-        self.header_byte_length  = header_byte_length_dict[data_format]
+        self.header_byte_length = header_byte_length_dict[data_format]
 
         udp_s = socket.socket(type=2)
         udp_s.bind((self.server_ip, self.port))
         udp_s.settimeout(None)
         self.udp_s = udp_s
 
-    def loadDataPacketFormat(self):
-        ...
+    def loadDataPacketFormat(self): ...
 
     def setTimeout(self, timeout: float):
         """Set timeout on udp."""
@@ -95,7 +89,7 @@ class UDPhandler:
 
         Each packet must be less than 1024 bytes.
         """
-        data_bytes = b''
+        data_bytes = b""
         packet_counter = 0
 
         if self.mask_common_header:
@@ -112,9 +106,32 @@ class UDPhandler:
 
         return data_bytes
 
+    def collectPacketsFor(self, duration: float) -> bytes:
+        """
+        Collects packets for a certain time.
+
+        Args:
+            duration: Duration in seconds.
+        """
+        data_bytes = b""
+
+        if self.mask_common_header:
+            filter_index = 10
+        elif self.mask_header:
+            filter_index = self.header_byte_length + 10
+        else:
+            filter_index = 0
+
+        start_time = time.time()
+        end_time = start_time + duration
+        while time.time() < end_time:
+            data_bytes += self.receiveData()[filter_index:]
+
+        return data_bytes
+
     def data2csv(self, data_array: np.ndarray, filename: str) -> None:
         """Store captured data to a csv-file."""
-        data_array.tofile(filename, sep=';')
+        data_array.tofile(filename, sep=";")
 
     def socketClose(self) -> None:
         """Closes UDP connection."""
